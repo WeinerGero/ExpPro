@@ -73,8 +73,7 @@ class MainWindow(QMainWindow, Form):
                                    'Конец оценки.mp3',
                                    'Начало исследования.mp3',
                                    'Опрос.mp3',
-                                   'Оценка от 1 до 5.mp3',
-                                   'Оценка от 1 до 10.mp3']
+                                   'Оценка песни.mp3']
         self.path_system_sounds = ['system_sounds/' + path for path in self.path_system_sounds]
         for path_song in self.path_system_sounds:
             song = QMediaContent(QUrl(path_song))
@@ -311,13 +310,8 @@ class MainWindow(QMainWindow, Form):
             # hide buttons
             self.enable_button_group(enabled=False)
 
-            # change system sound for instruction rating
-            if self.setting_stars == 5:
-                # sound instruction for 5 stars
-                self.system_playlist.setCurrentIndex(6)
-            else:
-                # sound instruction for 10 stars
-                self.system_playlist.setCurrentIndex(7)
+            # start instruction
+            self.system_playlist.setCurrentIndex(6)
             self.system_media_player.play()
 
             # stop the accumulation of modified indexes
