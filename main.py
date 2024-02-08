@@ -40,10 +40,12 @@ class MainWindow(QMainWindow, Form):
         self.num_man = 0
         self.setting_stars = 5
         self.rating_song = 0
+        self.valence_mood_song = 5
+        self.arosual_mood_song = 5
         self.index_song = 0
         self.order_songs = []
-        self.time_sleep = 15 * 1000
-        self.state_rest_duration = 60 * 1000
+        self.time_sleep = 1 * 1000   # 15 * 1000 = 60 seconds
+        self.state_rest_duration = 1 * 1000   # 60 * 1000 = 60 seconds
 
         self.setWindowTitle('ExpPro')
         icon = QIcon("icon.png")
@@ -375,34 +377,7 @@ class MainWindow(QMainWindow, Form):
 
         self.disable_button_group()
 
-        # check if it was last song in playlist of this experiment
-        print('Empty order song?', not self.order_songs, self.order_songs)
-        if not self.order_songs:
-            # change system sound for end of experiment
-            self.system_playlist.setCurrentIndex(2)
-            self.system_media_player.play()
-
-            # stop the accumulation of modified indexes
-            self.system_playlist.currentIndexChanged.disconnect()
-
-            # end sound end of experiment
-            self.system_playlist.currentIndexChanged.connect(self.system_media_player.stop)
-
-            # end of the person if order is empty
-            self.open_end_person_widget()   # add pause
-        else:
-            # change system sound for end of rating
-            self.system_playlist.setCurrentIndex(3)
-            self.system_media_player.play()
-
-            # stop the accumulation of modified indexes
-            self.system_playlist.currentIndexChanged.disconnect()
-
-            # end sound end of rating
-            self.system_playlist.currentIndexChanged.connect(self.system_media_player.stop)
-
-            # switch to the listening widget if order is fully
-            QTimer.singleShot(3000, self.open_listening_mode)
+        self.open_choose_mood_widget()
 
     def open_end_person_widget(self):
         # stop songs playing
@@ -423,10 +398,12 @@ class MainWindow(QMainWindow, Form):
         name_songs = [file_path.split('/')[-1].split('.')[0] for file_path in self.path_filenames]
 
         sorted_list_rating_songs_person = [item[1] for item in sorted(zip(self.order_songs_copy, self.list_rating_songs_person))]
+        sorted_list_mood_songs_person = [item[1] for item in sorted(zip(self.order_songs_copy, self.list_mood_songs_person))]
+        print(sorted_list_mood_songs_person)
 
         data = []
         for i in range(len(self.order_songs_copy)):
-            data.append([self.num_man, name_songs[i], sorted_list_rating_songs_person[i]])
+            data.append([self.num_man, name_songs[i], sorted_list_rating_songs_person[i], sorted_list_mood_songs_person[i][0], sorted_list_mood_songs_person[i][1]])
             print(f'{i}, {name_songs[i]}:', sorted_list_rating_songs_person[i])
 
         return data
@@ -483,6 +460,7 @@ class MainWindow(QMainWindow, Form):
 
         # add list of rating for this person
         self.list_rating_songs_person = []
+        self.list_mood_songs_person = []
 
         # change system sound for setting person
         self.system_playlist.setCurrentIndex(5)
@@ -543,6 +521,59 @@ class MainWindow(QMainWindow, Form):
             print(self.system_media_player.volume())
             self.volumeLevelProgressBar.setValue(self.volume)
 
+    def open_choose_mood_widget(self):
+        # open the calibration widget
+        self.stackedWidget.setCurrentWidget(self.ChooseMoodWidget)
+        self.continuePushButton_3.clicked.connect(self.detect_end_song)
+        self.ValenceHorizontalSlider.setValue(10)
+        self.ArosualHorizontalSlider.setValue(10)
+
+        print("mood opened")
+
+        self.flag_mood = True
+
+    def detect_end_song(self):
+        if self.flag_mood:
+            self.flag_mood = False
+
+            self.valence_mood_song = self.ArosualHorizontalSlider.value()
+            self.arosual_mood_song = self.ValenceHorizontalSlider.value()
+            self.list_mood_songs_person.append((self.valence_mood_song, self.arosual_mood_song))
+            print(f"mood songs are {self.list_mood_songs_person}")
+
+            # check if it was last song in playlist of this experiment
+            print('Empty order song?', not self.order_songs, self.order_songs)
+            if not self.order_songs:
+                # change system sound for end of experiment
+                self.system_playlist.setCurrentIndex(2)
+                self.system_media_player.play()
+
+                # stop the accumulation of modified indexes
+                self.system_playlist.currentIndexChanged.disconnect()
+
+                # end sound end of experiment
+                self.system_playlist.currentIndexChanged.connect(self.system_media_player.stop)
+
+                # end of the person if order is empty
+                self.open_end_person_widget()  # add pause
+
+                print('End of experiment')
+            else:
+                # change system sound for end of rating
+                self.system_playlist.setCurrentIndex(3)
+                self.system_media_player.play()
+
+                # stop the accumulation of modified indexes
+                self.system_playlist.currentIndexChanged.disconnect()
+
+                # end sound end of rating
+                self.system_playlist.currentIndexChanged.connect(self.system_media_player.stop)
+
+                # switch to the listening widget if order is fully
+                QTimer.singleShot(3000, self.open_listening_mode)
+
+                print("Cont")
+
 
 def change_widgets(old_widget, new_widget):
     old_widget.hide()
@@ -553,7 +584,7 @@ def exit_app():
     exit()
 
 
-def write_to_csv(file_path, data: list = ['Участник', 'Песня', 'Рейтинг']):
+def write_to_csv(file_path, data: list = ['Участник', 'Песня', 'Рейтинг', 'Направление эмоций','Сила эмоции']):
     with open(file_path, 'a', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter='@')
         writer.writerow(data)
