@@ -72,8 +72,8 @@ class MainWindow(QMainWindow, Form):
         self.arosual_mood_song = 5
         self.index_song = 0
         self.order_songs = []
-        self.time_sleep = 1 * 1000   # 15 * 1000 = 60 seconds
-        self.state_rest_duration = 1 * 1000   # 60 * 1000 = 60 seconds
+        self.time_sleep = 15 * 1000   # 15 * 1000 = 60 seconds
+        self.state_rest_duration = 60 * 1000   # 60 * 1000 = 60 seconds
 
         self.setWindowTitle('ExpPro')
         icon = QIcon("icon.png")
