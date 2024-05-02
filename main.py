@@ -5,8 +5,36 @@ from PyQt5.QtCore import Qt, QUrl, QTimer
 from PyQt5.QtMultimedia import QMediaPlayer, QMediaPlaylist, QMediaContent
 from PyQt5.QtGui import QIcon, QFont
 
+
 from random import shuffle, randint
-from webbrowser import open_new
+import os
+import webbrowser as web
+
+
+def find_chrome_path():
+    # Проверяем путь к Google Chrome для Windows
+    if os.name == 'nt':
+        paths = [
+            os.path.join(os.environ['ProgramFiles'], 'Google', 'Chrome', 'Application', 'chrome.exe'),
+            os.path.join(os.environ['ProgramFiles(x86)'], 'Google', 'Chrome', 'Application', 'chrome.exe')
+        ]
+        for path in paths:
+            if os.path.isfile(path):
+                return path
+    # Проверяем путь к Google Chrome для macOS
+    elif os.name == 'posix':
+        path = '/Applications/Google Chrome.app/Contents/MacOS/Google Chrome'
+        if os.path.isfile(path):
+            return path
+    # Возвращаем None, если путь к Google Chrome не найден
+    return None
+
+
+chrome_path = find_chrome_path()
+if chrome_path:
+    web.register('chrome', None, web.BackgroundBrowser(chrome_path))
+else:
+    print("Google Chrome не найден.")
 
 #from openpyxl import Workbook, load_workbook
 # import xlwings as xw
@@ -44,8 +72,8 @@ class MainWindow(QMainWindow, Form):
         self.arosual_mood_song = 5
         self.index_song = 0
         self.order_songs = []
-        self.time_sleep = 1 * 1000   # 15 * 1000 = 60 seconds
-        self.state_rest_duration = 1 * 1000   # 60 * 1000 = 60 seconds
+        self.time_sleep = 15 * 1000   # 15 * 1000 = 60 seconds
+        self.state_rest_duration = 60 * 1000   # 60 * 1000 = 60 seconds
 
         self.setWindowTitle('ExpPro')
         icon = QIcon("icon.png")
@@ -213,12 +241,17 @@ class MainWindow(QMainWindow, Form):
         # open the questionnaire through the link from settings experiment
         link = self.linkLineEdit.text()
         if link:
-            open_new(link)  # ADD TRY
+            web.get('chrome').open_new_tab(link)
+        else:
+            web.get('chrome').open_new_tab("forms.gle/PjJB9xJN12F4fjNM8")
 
     def open_listening_mode(self):
         # run current song
         self.index_song = self.order_songs.pop(0)
         self.experiment_playlist.setCurrentIndex(self.index_song)
+
+        self.songs_sequence_num += 1
+        self.songs_sequence_dict.update({self.index_song: self.songs_sequence_num})
 
         # open the listen widget
         self.stackedWidget.setCurrentWidget(self.ListeningModeWidget)
@@ -393,12 +426,14 @@ class MainWindow(QMainWindow, Form):
 
         sorted_list_rating_songs_person = [item[1] for item in sorted(zip(self.order_songs_copy, self.list_rating_songs_person))]
         sorted_list_mood_songs_person = [item[1] for item in sorted(zip(self.order_songs_copy, self.list_mood_songs_person))]
-        print(sorted_list_mood_songs_person)
+        print(self.order_songs_copy)
+        print(self.songs_sequence_dict)
 
         data = []
         for i in range(len(self.order_songs_copy)):
-            data.append([self.num_man, name_songs[i], sorted_list_rating_songs_person[i], sorted_list_mood_songs_person[i][0], sorted_list_mood_songs_person[i][1]])
-            print(f'{i}, {name_songs[i]}:', sorted_list_rating_songs_person[i])
+            data.append([self.num_man, name_songs[i], sorted_list_rating_songs_person[i], sorted_list_mood_songs_person[i][0],
+                         sorted_list_mood_songs_person[i][1], self.songs_sequence_dict[i]])
+            print(f'{i}, {name_songs[i]}:', sorted_list_rating_songs_person[i], self.songs_sequence_dict[i])
 
         return data
 
@@ -439,6 +474,9 @@ class MainWindow(QMainWindow, Form):
             shuffle(self.order_songs)
         self.order_songs_copy = self.order_songs[:]
         print('after shuffle', self.order_songs)
+
+        self.songs_sequence_dict = {}
+        self.songs_sequence_num = 0
 
         # take num man from the spin box
         text_num_man = 'Ваш номер: '
@@ -578,7 +616,7 @@ def exit_app():
     exit()
 
 
-def write_to_csv(file_path, data: list = ['Участник', 'Песня', 'Рейтинг', 'Направление эмоций','Сила эмоции']):
+def write_to_csv(file_path, data: list = ['Участник', 'Песня', 'Рейтинг', 'Направление эмоций','Сила эмоции', 'Очередь песни']):
     with open(file_path, 'a', newline='') as csv_file:
         writer = csv.writer(csv_file, delimiter='@')
         writer.writerow(data)
@@ -589,7 +627,7 @@ def make_name_cvs(path_filenames: list, num_man: int = 0):
     random_index = randint(0, 1000)
     first_elements = [file_path.split('/')[-1].split('.')[0] for file_path in path_filenames]
     first_chars = [item[0] for item in first_elements]
-    file_path = 'out_data/' + ''.join(first_chars) + '_' + str(num_man) + str(random_index) + '.csv'
+    file_path = 'out_data/' + str(num_man) + '_' + ''.join(first_chars) + '_' + str(random_index) + '.csv'
 
     write_to_csv(file_path)
     return file_path
